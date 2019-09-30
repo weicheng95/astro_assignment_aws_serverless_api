@@ -14,8 +14,6 @@ module.exports = (sequelize, DataTypes) => {
     rewardCode: DataTypes.STRING
   }, {});
   Redeem.associate = function (models) {
-    // associations can be defined here
-    // associations can be defined here
     Redeem.belongsTo(models.User, {
       foreignKey: 'userId',
       as: 'user'

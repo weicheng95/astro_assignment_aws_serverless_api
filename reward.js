@@ -2,6 +2,8 @@ const dayjs = require('dayjs');
 const models = require("./database/models");
 const helpers = require('./utils/helpers.js');
 const { authenticate } = require('./utils/authentication.js');
+const { isRedeem } = require('./utils/helpers.js');
+
 /**
  * @desc get reward by id
  * @param INTEGER id
@@ -241,6 +243,9 @@ module.exports.updateReward = async event => {
     console.log(err);
     return {
       statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      },
       body: 'Error: Could not update reward: ' + err
     }
   }
@@ -272,6 +277,9 @@ module.exports.deleteReward = async event => {
     console.log(err);
     return {
       statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      },
       body: 'Error: Could not delete reward: ' + err
     }
   }
@@ -289,56 +297,107 @@ module.exports.redeemReward = async event => {
 
     //verify user
     const user = await authenticate(IDNumber, accountNumber);
-    if (user) {
-      //get reward information
-      const reward = await models.Reward.findByPk(rewardId);
-      //generate promo code based on reward code
-      if (reward) {
-        if (reward.codeLeft > 0) {
-          const rewardCode = `${reward.code}${reward.codeLeft}`;
-          const redeemStartAt = dayjs().format();
-          const redeemEndAt = dayjs().add(1, 'hour').format();
+    console.log(user);
+    // throw user not found.
+    if (!user) {
+      throw Error("user not found.");
+    }
 
-          //create new record in redeem table
-          await models.Redeem.create({
-            rewardCode,
-            redeemStartAt,
-            redeemEndAt,
-            rewardId,
-            userId: user.id
-          });
+    // user already redeem
+    const redeemRes = await isRedeem({ userId: user.id, rewardId });
+    if (redeemRes) {
+      throw Error("user already redeem this reward.");
+    }
 
-          //reduce codeleft
-          await models.Reward.update({
-            codeLeft: reward.codeLeft - 1
-          }, {
-            where: {
-              id: rewardId
-            }
-          });
+    //get reward information
+    const reward = await models.Reward.findByPk(rewardId);
 
-          //return reward code and date
-          return {
-            statusCode: 200,
-            headers: {
-              "Access-Control-Allow-Origin": "*",
-            },
-            body: JSON.stringify({ rewardCode, redeemStartAt, redeemEndAt, rewardId }),
-          }
-        } else {
-          throw "all reward have fully redeemed."
+    // throw reward error
+    if (!reward) {
+      throw Error("reward not found.");
+    };
+
+    if (reward.codeLeft > 0) {
+      const rewardCode = `${reward.code}${reward.codeLeft}`;
+      const redeemStartAt = dayjs().format();
+      const redeemEndAt = dayjs().add(1, 'hour').format();
+
+      //create new record in redeem table
+      await models.Redeem.create({
+        rewardCode,
+        redeemStartAt,
+        redeemEndAt,
+        rewardId,
+        userId: user.id
+      });
+
+      //reduce codeleft
+      await models.Reward.update({
+        codeLeft: reward.codeLeft - 1
+      }, {
+        where: {
+          id: rewardId
         }
-      } else {
-        throw "reward not found.";
+      });
+
+      //return reward code and date
+      return {
+        statusCode: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({ rewardCode, redeemStartAt, redeemEndAt, rewardId, IDNumber, accountNumber }),
       }
     } else {
-      throw "user not found.";
+      throw "all reward have fully redeemed."
     }
   } catch (err) {
-    console.log(err);
     return {
       statusCode: 500,
-      body: err
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: err.toString()
+    }
+  }
+};
+
+/**
+ * @desc check is reward redeem
+ * @param POST - (ID Number, Account Number, rewardId)
+ * @return JSON - status code, json object
+ */
+module.exports.isRewardRedeem = async event => {
+  try {
+    //only extract certain variable from body
+    const { rewardId, IDNumber, accountNumber } = JSON.parse(event.body);
+
+    //verify user
+    const user = await authenticate(IDNumber, accountNumber);
+    console.log(user);
+    // throw user not found.
+    if (!user) {
+      throw Error("user not found.");
+    }
+
+    // user already redeem
+    const redeemRes = await isRedeem({ userId: user.id, rewardId });
+
+    //return reward code and date
+    return {
+      statusCode: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify(redeemRes),
+    }
+  } catch (err) {
+    return {
+      statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: err.toString()
     }
   }
 };

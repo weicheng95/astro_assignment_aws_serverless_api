@@ -92,6 +92,13 @@ functions:
           - http:
               path: reward/redeem
               method: post
+              cors: true
+  isRewardRedeem:
+    handler: handler.isRewardRedeem
+    events:
+          - http:
+              path: reward/redeem/check
+              method: post
               cors: true 
   getVendor:
     handler: handler.getVendor
