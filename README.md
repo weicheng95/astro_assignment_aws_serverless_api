@@ -75,8 +75,6 @@ To boost up the development speed, vue provide cli tool to do configuration for 
 3. main package using in this project : **eslint, vue-router, vuex, bulma.**
 4. Everything is following astro.reward.com.my including UI design, workflow.
 5. All static assets are come from astro.reward.com.my, including logo.
-6. this project is hosting at aws s3, feel free to check it. http://astro-reward-assignment.s3-website-ap-southeast-1.amazonaws.com
-7. to access CMS page, go to this route http://astro-reward-assignment.s3-website-ap-southeast-1.amazonaws.com/Admin
 > using below user to login
     ID: 901010055555	accountNumber: 1234567890
     ID: 801010055555	accountNumber: 3333333333
